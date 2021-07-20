@@ -1,10 +1,12 @@
 #include <ESP8266WiFi.h>
 #include <FastLED.h>
 #include <ESP8266WebServer.h>
+#include <FS.h>
 
 
 // ESP8266wifi DOCS: https://arduino-esp8266.readthedocs.io/en/latest/esp8266wifi/readme.html
 // FastLED docs: http://fastled.io/
+// SPIFFS filesystem install docs (use newest version): https://randomnerdtutorials.com/install-esp8266-filesystem-uploader-arduino-ide/
 
 #define NUM_LEDS 2
 #define DATA_PIN 14
@@ -18,13 +20,34 @@ ESP8266WebServer server(80);
 String header;
 String ssid = "SmartBadge";
 int numClients;
+String webPage = "<html><body><h1>Hello world, this is my smart badge!</h1></body></html>";
 
 /* verification message on connect.  Go to http://192.168.4.1 in a web browser 
  *  connected to this access point to see it.
- *  
+ *  (not currently working on phone, but works on laptop)
   */
 void handleRoot() {
-  server.send(200, "text/html", "<h1>Hello world, this is my smart badge!</h1>"); 
+  if(!SPIFFS.begin()){
+    Serial.println("An Error has occurred while mounting SPIFFS");
+    server.send(200, "text/html", "<html><body><h1>Hello world, this is my smart badge!<BR>Unfortunately, the file system is not working today.</h1></body></html>");     
+  }
+  else{
+    File file = SPIFFS.open("/index.html", "r");
+    if(!file){
+      Serial.println("Failed to open file for reading");      
+    }
+    else {
+      Serial.println();
+      Serial.println("File Content:");
+      while(file.available()){
+        webPage = file.readString();
+        //Serial.write(file.read());
+        Serial.println(webPage);
+      }
+      file.close();
+    }
+  }
+  server.send(200, "text/html", webPage); 
   Serial.println("Client request handled");
 }
 
@@ -63,22 +86,5 @@ void loop() {
   }
 
   server.handleClient();
-//  WiFiClient client = server.available();
-//
-//  if (client){
-//    Serial.println("NewClient.");
-//    
-//  // Display the HTML web page
-//  client.println("<!DOCTYPE html><html>");
-//  client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-//  client.println("<link rel=\"icon\" href=\"data:,\">");
-//  client.println("</head>");
-//            
-//  // Web Page Heading
-//  client.println("<body><h1>WiFi SAO Web Server</h1>");
-//            
-//  // Display current state 
-//  client.println("<p>Hello World</p>");
-//  }
 
 }
