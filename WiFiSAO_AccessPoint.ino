@@ -22,6 +22,47 @@ String ssid = "SmartBadge";
 int numClients;
 String webPage = "<html><body><h1>Hello world, this is my smart badge!</h1></body></html>";
 
+
+
+void setup() {
+  delay(1000);
+  Serial.begin(115200);
+  Serial.println();
+
+  // Initialize LEDs
+  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
+  FastLED.setBrightness(  20 );
+  leds[0] = CRGB::Black;
+  leds[1] = CRGB::Black;
+  FastLED.show();
+  FastLED.show();
+  
+  
+  Serial.print("Setting up access point");
+  Serial.println(WiFi.softAP(ssid) ? "Success" : "Fail");
+
+  Serial.print("Access Point AP Address");
+  Serial.println(WiFi.softAPIP());
+
+  server.on("/", handleRoot);
+  server.on("/feedback.html", handleFeedback);
+  server.begin();
+  Serial.println("HTTP server started");
+
+}
+
+void loop() {
+  // how many clients connected?
+  if(numClients != WiFi.softAPgetStationNum()){
+    numClients = WiFi.softAPgetStationNum();
+    Serial.printf("Stations connected = %d\n", numClients);
+    //delay(3000);
+  }
+
+  server.handleClient();
+
+}
+
 /* verification message on connect.  Go to http://192.168.4.1 in a web browser 
  *  connected to this access point to see it.
  *  (not currently working on phone, but works on laptop)
@@ -51,40 +92,11 @@ void handleRoot() {
   Serial.println("Client request handled");
 }
 
-void setup() {
-  delay(1000);
-  Serial.begin(115200);
-  Serial.println();
-
-  // Initialize LEDs
-  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
-  FastLED.setBrightness(  20 );
-  leds[0] = CRGB::Black;
-  leds[1] = CRGB::Black;
-  FastLED.show();
-  FastLED.show();
+void handleFeedback(){
+  Serial.println("Feedback handling");
+  Serial.println(server.arg("contactbox"));
   
-  
-  Serial.print("Setting up access point");
-  Serial.println(WiFi.softAP(ssid) ? "Success" : "Fail");
-
-  Serial.print("Access Point AP Address");
-  Serial.println(WiFi.softAPIP());
-
-  server.on("/", handleRoot);
-  server.begin();
-  Serial.println("HTTP server started");
-
-}
-
-void loop() {
-  // how many clients connected?
-  if(numClients != WiFi.softAPgetStationNum()){
-    numClients = WiFi.softAPgetStationNum();
-    Serial.printf("Stations connected = %d\n", numClients);
-    //delay(3000);
-  }
-
-  server.handleClient();
-
+  server.send(200, "text/html", "<html><body><h1>Thank you for your feedback, " + server.arg("contactbox") + ". Unfortunately, I've already forgotten it!  Good talk.");
+  //server.sendHeader("Location", "/");
+  //server.send(303);
 }
